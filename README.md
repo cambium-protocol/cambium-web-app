@@ -123,10 +123,10 @@ cp .env.example .env.local
 NEXT_PUBLIC_STELLAR_NETWORK=testnet
 NEXT_PUBLIC_SOROBAN_RPC_URL=https://soroban-testnet.stellar.org
 
-NEXT_PUBLIC_REGISTRY_CONTRACT_ID=C...
-NEXT_PUBLIC_CREDIT_TOKEN_CONTRACT_ID=C...
-NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID=C...
-NEXT_PUBLIC_RETIREMENT_CONTRACT_ID=C...
+NEXT_PUBLIC_REGISTRY_CONTRACT_ID=CBSLLVCIZBXKPHY73PN5DVHQKNGK4FAZBXMQLKZCJABABUX5OQGPHC43
+NEXT_PUBLIC_CREDIT_TOKEN_CONTRACT_ID=CBRBMYB6UTJEMMSBQQPYHAIO5QWJAT4EBPIFTEEB6MRY6ZZD5NS5KY36
+NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID=CAKXZQTCVDSGVF2BU5FY636O4TDCAX5UJCWYGQKDKMOA5QNBDKPXZ5S7
+NEXT_PUBLIC_RETIREMENT_CONTRACT_ID=CDIHLUARSMSYU27QRKXBWVK5HXIJRUAQ3SYQYCK3MZ2UKMCRB275H3G5
 
 # Optional: only needed if enabling shielded retirement in the UI
 NEXT_PUBLIC_ZK_PROVING_SERVICE_URL=
@@ -208,8 +208,34 @@ The app is a standard Next.js app deployable to Vercel, or as a Docker container
 
 ---
 
+## Status
+
+**Version 0.1.0 — testnet**
+
+| Page | Status |
+|---|---|
+| Landing / marketing | Working — renders, links to Projects/Trade/Retire |
+| Project explorer | Working — loads projects from registry via SDK |
+| Project detail + proof transparency | Working — shows methodology version, verifying key from on-chain data |
+| Trade (AMM swap) | Working — quotes, builds swap tx, submits via wallet |
+| Trade (limit orders) | Coming Soon — `placeLimitOrder` / `cancelOrder` not yet in SDK |
+| Retire | Scaffolded — UI renders "Coming Soon" toggle for shielded retirement; public retirement builds unsigned tx via SDK |
+| Portfolio dashboard | Not yet built |
+| Public retirement ledger | Not yet built |
+
+| Infrastructure | Status |
+|---|---|
+| Wallet connection (Freighter etc.) | Working via Stellar Wallets Kit |
+| Unit tests (Vitest) | 4/4 passing |
+| E2E tests (Playwright) | Scaffolded, requires browser install in CI |
+
+---
+
 ## Roadmap
 
+- [ ] Implement portfolio dashboard page
+- [ ] Implement public retirement ledger page
+- [ ] Wire up retirement flow end-to-end (unsigned tx → wallet sign → submit → certificate)
 - [ ] Public API/embeddable widget for the retirement ledger (so third parties can display verified retirements on their own sites)
 - [ ] Mobile-optimized retirement certificate sharing
 - [ ] Localization beyond English

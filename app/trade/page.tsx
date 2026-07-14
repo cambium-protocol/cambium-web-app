@@ -18,7 +18,7 @@ export default function TradePage() {
       const client = getCambiumClient();
       return client.marketplace.quote({ poolId, amountIn });
     },
-    enabled: !!poolId && !!amountIn && BigInt(amountIn) > 0n,
+    enabled: !!poolId && !!amountIn && BigInt(amountIn) > BigInt(0),
   });
 
   const swapMutation = useMutation({
