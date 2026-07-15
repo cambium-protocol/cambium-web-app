@@ -4,22 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { getCambiumClient } from '@/lib/cambiumClient';
 import { ProjectCardSkeleton } from '@/components/ui/Skeleton';
-
-interface RetirementEntry {
-  id: string;
-  projectId: string;
-  amount: string;
-  vintageYear: number;
-  timestamp: string;
-  retiredBy: string;
-}
+import type { RetirementRecord } from '@cambium-protocol/sdk';
 
 export default function LedgerPage() {
-  const { data: entries, isLoading, error } = useQuery<RetirementEntry[]>({
+  const { data: entries, isLoading, error } = useQuery<RetirementRecord[]>({
     queryKey: ['ledger'],
     queryFn: async () => {
       const client = getCambiumClient();
-      return client.retirement.listRetirements({ limit: 50 });
+      return client.retirement.listRetirements();
     },
   });
 
@@ -89,10 +81,12 @@ export default function LedgerPage() {
                   <td className="px-4 py-3 font-medium">{entry.amount} tCO2e</td>
                   <td className="px-4 py-3 text-gray-600">{entry.vintageYear}</td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                    {entry.retiredBy.slice(0, 8)}...
+                    {entry.retiree.type === 'public'
+                      ? `${entry.retiree.address.slice(0, 8)}...`
+                      : 'Shielded'}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {new Date(entry.timestamp).toLocaleDateString()}
+                    {new Date(entry.retiredAt * 1000).toLocaleDateString()}
                   </td>
                 </tr>
               ))}
