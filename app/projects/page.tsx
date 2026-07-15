@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { getCambiumClient } from '@/lib/cambiumClient';
+import { ProjectCardSkeleton } from '@/components/ui/Skeleton';
 import type { Project } from '@cambium-protocol/sdk';
 
 export default function ProjectsPage() {
@@ -19,7 +20,11 @@ export default function ProjectsPage() {
       <h1 className="mb-6 text-2xl font-bold text-gray-900">Projects</h1>
 
       {isLoading && (
-        <div className="py-12 text-center text-gray-500">Loading projects...</div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <ProjectCardSkeleton key={i} />
+          ))}
+        </div>
       )}
 
       {error && (

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getCambiumClient } from '@/lib/cambiumClient';
+import { ProjectDetailSkeleton } from '@/components/ui/Skeleton';
 import type { Project, Vintage } from '@cambium-protocol/sdk';
 
 export default function ProjectDetailPage() {
@@ -30,7 +31,7 @@ export default function ProjectDetailPage() {
   });
 
   if (projectQuery.isLoading) {
-    return <div className="py-12 text-center text-gray-500">Loading project...</div>;
+    return <ProjectDetailSkeleton />;
   }
 
   if (projectQuery.error) {
