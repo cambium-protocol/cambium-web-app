@@ -32,9 +32,11 @@ export default function RetirePage() {
       const result = await client.submit(signedXdr);
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      const record = data?.record || data?.retirementRecord;
       setRetireResult({
         success: true,
+        record,
         message: 'Credits retired successfully.',
       });
     },
