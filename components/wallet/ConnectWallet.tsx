@@ -4,8 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
 
 export function ConnectWallet() {
-  const { connected, address, connect, disconnect } = useWallet();
+  const { connected, address, loading, connect, disconnect } = useWallet();
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -18,14 +19,38 @@ export function ConnectWallet() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const handleConnect = async () => {
+    setError(null);
+    try {
+      await connect();
+    } catch (e: any) {
+      setError(e.message || 'Failed to connect');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-md bg-gray-100 px-4 py-2 text-sm text-gray-400">
+        Loading wallet...
+      </div>
+    );
+  }
+
   if (!connected) {
     return (
-      <button
-        onClick={connect}
-        className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-      >
-        Connect Wallet
-      </button>
+      <div className="relative">
+        <button
+          onClick={handleConnect}
+          className="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+        >
+          Connect Wallet
+        </button>
+        {error && (
+          <div className="absolute right-0 top-full mt-2 w-64 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700 shadow-lg">
+            {error}
+          </div>
+        )}
+      </div>
     );
   }
 
