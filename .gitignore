@@ -6,10 +6,6 @@ node_modules/
 out/
 next-env.d.ts
 
-# Lock files
-pnpm-lock.yaml
-pnpm-workspace.yaml
-
 # Environment
 .env
 .env.local
