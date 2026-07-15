@@ -37,7 +37,7 @@ The public marketplace frontend for Cambium Protocol — browse projects, trade 
 ## Features
 
 - **Project explorer** — browse registered carbon projects by methodology, geography, vintage, and available supply, with full provenance (registry cross-references, MRV proof status, dispute history if any).
-- **Trading** — swap credits via the AMM pool or place/manage limit orders, with live price charts and slippage estimates.
+- **Trading** — swap credits via the AMM pool or place/manage limit orders, with slippage estimates.
 - **Fractional purchase** — buy credits down to the token's minimum unit (default 0.001 tCO2e) — no large minimum lot size.
 - **Retirement flow** — retire credits for an offset claim, with an option for shielded (private) retirement using the ZK membership-proof path, and a downloadable/shareable public retirement certificate.
 - **Portfolio dashboard** — view held, traded, and retired credits across projects and vintages.
@@ -52,9 +52,8 @@ The public marketplace frontend for Cambium Protocol — browse projects, trade 
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
 - **State/data fetching:** TanStack Query
-- **Charts:** Recharts
 - **Protocol integration:** `@cambium-protocol/sdk`
-- **Wallet connection:** Stellar Wallets Kit (supports Freighter, Albedo, Ledger, xBull, and WalletConnect-based wallets)
+- **Wallet connection:** Freighter browser wallet (via `window.freighter` API)
 
 ---
 
@@ -63,7 +62,6 @@ The public marketplace frontend for Cambium Protocol — browse projects, trade 
 ```
 web-app/
 ├── app/
-│   ├── (marketing)/
 │   ├── projects/
 │   │   ├── page.tsx                # project explorer
 │   │   └── [projectId]/page.tsx    # project detail + proof transparency panel
@@ -75,19 +73,25 @@ web-app/
 │   │   └── page.tsx
 │   ├── ledger/
 │   │   └── page.tsx                # public retirement ledger
-│   └── layout.tsx
+│   ├── layout.tsx
+│   └── providers.tsx
 ├── components/
 │   ├── wallet/
-│   ├── charts/
-│   ├── project/
+│   │   └── ConnectWallet.tsx
 │   └── ui/
+│       └── Skeleton.tsx
 ├── lib/
 │   ├── cambiumClient.ts             # sdk-js client instance + config
 │   └── hooks/
-├── public/
+│       ├── useWallet.ts
+│       └── useToast.tsx
 ├── tests/
 │   ├── unit/
 │   └── e2e/                          # Playwright
+├── .github/
+│   ├── workflows/ci.yml
+│   └── ISSUE_TEMPLATE/
+├── Dockerfile
 ├── next.config.js
 ├── tailwind.config.ts
 ├── package.json
@@ -109,7 +113,7 @@ web-app/
 ```bash
 git clone https://github.com/cambium-protocol/web-app.git
 cd web-app
-npm install
+pnpm install
 cp .env.example .env.local
 ```
 
@@ -139,7 +143,7 @@ Contract addresses should match the output of `contracts`' `scripts/deploy.sh` f
 ## Running locally
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 App runs at `http://localhost:3000`. Connect a testnet wallet with testnet XLM (use [Friendbot](https://developers.stellar.org/docs/tools/developer-tools#friendbot) to fund a testnet account) to exercise trading and retirement flows end-to-end.
@@ -149,8 +153,8 @@ App runs at `http://localhost:3000`. Connect a testnet wallet with testnet XLM (
 ## Building for production
 
 ```bash
-npm run build
-npm start
+pnpm build
+pnpm start
 ```
 
 Static analysis and type-checking run as part of `npm run build`; the build will fail on type errors by design.
@@ -175,27 +179,31 @@ Static analysis and type-checking run as part of `npm run build`; the build will
 | Wallet | Status |
 |---|---|
 | Freighter | Supported |
-| Albedo | Supported |
-| Ledger (via Stellar Wallets Kit) | Supported |
-| xBull | Supported |
-| WalletConnect-based wallets | Supported |
+| Albedo | Planned — requires Stellar Wallets Kit integration |
+| Ledger (via Stellar Wallets Kit) | Planned |
+| xBull | Planned |
+| WalletConnect-based wallets | Planned |
 
-Wallet integration lives in `components/wallet/` and wraps Stellar Wallets Kit; see `lib/hooks/useWallet.ts` for the app-level hook.
+Wallet integration currently uses the Freighter browser extension directly via `window.freighter`. See `lib/hooks/useWallet.ts`. Stellar Wallets Kit integration is on the roadmap for multi-wallet support.
 
 ---
 
-## Accessibility & i18n
+## Accessibility
 
-- Targets WCAG 2.1 AA; automated checks via `axe-core` run in CI against key pages.
-- i18n scaffolding uses `next-intl`; only English is shipped in v1, but all user-facing strings are already externalized in `messages/en.json` to make adding locales straightforward.
+- Targets WCAG 2.1 AA
+- Semantic HTML and proper form labels used throughout
+
+## i18n
+
+i18n is not yet implemented. All user-facing strings are hardcoded in English. Community contributions for localization are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
 ## Testing
 
 ```bash
-npm run test           # unit tests (Vitest + React Testing Library)
-npm run test:e2e        # Playwright, requires local contracts + a funded testnet wallet fixture
+pnpm test           # unit tests (Vitest + React Testing Library)
+pnpm test:e2e        # Playwright, requires local contracts + a funded testnet wallet fixture
 ```
 
 E2E tests use a scripted Freighter test-wallet fixture (`tests/e2e/fixtures/wallet.ts`) rather than a real browser extension, for CI reliability.
@@ -204,7 +212,9 @@ E2E tests use a scripted Freighter test-wallet fixture (`tests/e2e/fixtures/wall
 
 ## Deployment
 
-The app is a standard Next.js app deployable to Vercel, or as a Docker container (`Dockerfile` included) to any Node-compatible host. No server-side secrets are required beyond standard analytics/monitoring keys — all protocol interaction happens client-side via the connected wallet, consistent with the protocol's non-custodial design.
+The app is a standard Next.js app deployable to Vercel, or as a Docker container (`Dockerfile` included) to any Node-compatible host. The Dockerfile uses a multi-stage build with `standalone` output mode for minimal image size.
+
+No server-side secrets are required beyond standard analytics/monitoring keys — all protocol interaction happens client-side via the connected wallet, consistent with the protocol's non-custodial design.
 
 ---
 
@@ -220,22 +230,24 @@ The app is a standard Next.js app deployable to Vercel, or as a Docker container
 | Trade (AMM swap) | Working — quotes, builds swap tx, submits via wallet |
 | Trade (limit orders) | Coming Soon — `placeLimitOrder` / `cancelOrder` not yet in SDK |
 | Retire | Scaffolded — UI renders "Coming Soon" toggle for shielded retirement; public retirement builds unsigned tx via SDK |
-| Portfolio dashboard | Not yet built |
-| Public retirement ledger | Not yet built |
+| Portfolio dashboard | Scaffolded — renders holdings table, needs SDK integration |
+| Public retirement ledger | Scaffolded — renders retirement list, needs SDK integration |
 
 | Infrastructure | Status |
 |---|---|
 | Wallet connection (Freighter etc.) | Working via Stellar Wallets Kit |
-| Unit tests (Vitest) | 4/4 passing |
+| Unit tests (Vitest) | 10/10 passing |
 | E2E tests (Playwright) | Scaffolded, requires browser install in CI |
 
 ---
 
 ## Roadmap
 
-- [ ] Implement portfolio dashboard page
-- [ ] Implement public retirement ledger page
+- [x] Implement portfolio dashboard page
+- [x] Implement public retirement ledger page
 - [ ] Wire up retirement flow end-to-end (unsigned tx → wallet sign → submit → certificate)
+- [ ] Add Recharts integration for live price charts
+- [ ] Multi-wallet support via Stellar Wallets Kit
 - [ ] Public API/embeddable widget for the retirement ledger (so third parties can display verified retirements on their own sites)
 - [ ] Mobile-optimized retirement certificate sharing
 - [ ] Localization beyond English
