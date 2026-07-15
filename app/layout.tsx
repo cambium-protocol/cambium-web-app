@@ -8,8 +8,27 @@ import { Providers } from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Cambium Protocol',
-  description: 'Carbon credit marketplace on Stellar/Soroban',
+  title: {
+    default: 'Cambium Protocol',
+    template: '%s | Cambium Protocol',
+  },
+  description:
+    'A transparent, on-chain carbon credit marketplace built on Stellar/Soroban. Browse verified projects, trade credits, and retire offsets with cryptographic proof.',
+  keywords: ['carbon credits', 'Stellar', 'Soroban', 'blockchain', 'retirement', 'offsets'],
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Cambium Protocol',
+    title: 'Cambium Protocol',
+    description:
+      'A transparent, on-chain carbon credit marketplace built on Stellar/Soroban.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Cambium Protocol',
+    description:
+      'A transparent, on-chain carbon credit marketplace built on Stellar/Soroban.',
+  },
 };
 
 export default function RootLayout({
