@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getCambiumClient } from '@/lib/cambiumClient';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { useToast } from '@/lib/hooks/useToast';
 import type { Quote } from '@cambium-protocol/sdk';
 
 export default function TradePage() {
   const { connected, address, signTransaction } = useWallet();
+  const { addToast } = useToast();
   const [poolId, setPoolId] = useState('');
   const [amountIn, setAmountIn] = useState('');
-  const [swapResult, setSwapResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const quoteQuery = useQuery<Quote>({
     queryKey: ['quote', poolId, amountIn],
@@ -36,10 +37,10 @@ export default function TradePage() {
       return result;
     },
     onSuccess: () => {
-      setSwapResult({ success: true, message: 'Swap submitted successfully.' });
+      addToast('success', 'Swap submitted successfully.');
     },
     onError: (err: Error) => {
-      setSwapResult({ success: false, message: err.message });
+      addToast('error', err.message);
     },
   });
 
@@ -99,18 +100,6 @@ export default function TradePage() {
               : 'Swap'}
         </button>
       </div>
-
-      {swapResult && (
-        <div
-          className={`rounded-md p-4 text-sm ${
-            swapResult.success
-              ? 'bg-green-50 text-green-700'
-              : 'bg-red-50 text-red-700'
-          }`}
-        >
-          {swapResult.message}
-        </div>
-      )}
     </div>
   );
 }

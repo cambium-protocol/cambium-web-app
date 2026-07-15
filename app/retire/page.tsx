@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { getCambiumClient } from '@/lib/cambiumClient';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { useToast } from '@/lib/hooks/useToast';
 import type { RetirementRecord } from '@cambium-protocol/sdk';
 
 export default function RetirePage() {
   const { connected, address, signTransaction } = useWallet();
+  const { addToast } = useToast();
   const [projectId, setProjectId] = useState('');
   const [vintageYear, setVintageYear] = useState('');
   const [amount, setAmount] = useState('');
@@ -39,9 +41,11 @@ export default function RetirePage() {
         record,
         message: 'Credits retired successfully.',
       });
+      addToast('success', 'Credits retired successfully.');
     },
     onError: (err: Error) => {
       setRetireResult({ success: false, message: err.message });
+      addToast('error', err.message);
     },
   });
 
@@ -113,22 +117,14 @@ export default function RetirePage() {
         </button>
       </div>
 
-      {retireResult && (
-        <div
-          className={`rounded-md p-4 text-sm ${
-            retireResult.success
-              ? 'bg-green-50 text-green-700'
-              : 'bg-red-50 text-red-700'
-          }`}
-        >
-          {retireResult.message}
-          {retireResult.record && (
-            <div className="mt-2 border-t border-green-200 pt-2 text-xs">
-              <p>Retirement ID: {retireResult.record.id}</p>
-              <p>Amount: {retireResult.record.amount} tCO2e</p>
-              <p>Year: {retireResult.record.vintageYear}</p>
-            </div>
-          )}
+      {retireResult && retireResult.success && retireResult.record && (
+        <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+          <p className="font-medium">{retireResult.message}</p>
+          <div className="mt-2 border-t border-green-200 pt-2 text-xs">
+            <p>Retirement ID: {retireResult.record.id}</p>
+            <p>Amount: {retireResult.record.amount} tCO2e</p>
+            <p>Year: {retireResult.record.vintageYear}</p>
+          </div>
         </div>
       )}
     </div>
