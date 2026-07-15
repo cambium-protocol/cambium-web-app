@@ -7,6 +7,19 @@ import { useWallet } from '@/lib/hooks/useWallet';
 import { useToast } from '@/lib/hooks/useToast';
 import type { RetirementRecord } from '@cambium-protocol/sdk';
 
+function isValidYear(value: string): boolean {
+  if (!value) return false;
+  const num = Number(value);
+  const currentYear = new Date().getFullYear();
+  return Number.isInteger(num) && num >= 2000 && num <= currentYear + 1;
+}
+
+function isValidAmount(value: string): boolean {
+  if (!value) return false;
+  const num = Number(value);
+  return !isNaN(num) && num > 0 && /^\d*\.?\d*$/.test(value);
+}
+
 export default function RetirePage() {
   const { connected, address, signTransaction } = useWallet();
   const { addToast } = useToast();
@@ -18,6 +31,11 @@ export default function RetirePage() {
     record?: RetirementRecord;
     message: string;
   } | null>(null);
+
+  const projectIdValid = projectId.length > 0;
+  const vintageYearValid = isValidYear(vintageYear);
+  const amountValid = isValidAmount(amount);
+  const formValid = projectIdValid && vintageYearValid && amountValid;
 
   const retireMutation = useMutation({
     mutationFn: async () => {
@@ -42,6 +60,9 @@ export default function RetirePage() {
         message: 'Credits retired successfully.',
       });
       addToast('success', 'Credits retired successfully.');
+      setProjectId('');
+      setVintageYear('');
+      setAmount('');
     },
     onError: (err: Error) => {
       setRetireResult({ success: false, message: err.message });
@@ -65,6 +86,9 @@ export default function RetirePage() {
             placeholder="0x..."
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
+          {projectId.length > 0 && !projectIdValid && (
+            <p className="mt-1 text-xs text-red-600">Project ID is required</p>
+          )}
         </div>
 
         <div>
@@ -74,10 +98,20 @@ export default function RetirePage() {
           <input
             type="text"
             value={vintageYear}
-            onChange={(e) => setVintageYear(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || /^\d*$/.test(val)) {
+                setVintageYear(val);
+              }
+            }}
             placeholder="2025"
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
+          {vintageYear.length > 0 && !vintageYearValid && (
+            <p className="mt-1 text-xs text-red-600">
+              Enter a valid year (2000-{new Date().getFullYear() + 1})
+            </p>
+          )}
         </div>
 
         <div>
@@ -87,10 +121,20 @@ export default function RetirePage() {
           <input
             type="text"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                setAmount(val);
+              }
+            }}
             placeholder="0"
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
+          {amount.length > 0 && !amountValid && (
+            <p className="mt-1 text-xs text-red-600">
+              Enter a valid positive amount
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-500">
@@ -100,13 +144,7 @@ export default function RetirePage() {
 
         <button
           onClick={() => retireMutation.mutate()}
-          disabled={
-            !connected ||
-            !projectId ||
-            !vintageYear ||
-            !amount ||
-            retireMutation.isPending
-          }
+          disabled={!connected || !formValid || retireMutation.isPending}
           className="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {!connected
