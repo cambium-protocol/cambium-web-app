@@ -12,12 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: web-app
-      - uses: actions/checkout@v4
-        with:
-          repository: cambium-protocol/cambium-sdk
-          path: cambium-sdk
       - uses: pnpm/action-setup@v4
         with:
           version: 11
@@ -25,23 +19,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: web-app/pnpm-lock.yaml
       - run: pnpm install --no-frozen-lockfile
-        working-directory: web-app
       - run: pnpm lint
-        working-directory: web-app
 
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: web-app
-      - uses: actions/checkout@v4
-        with:
-          repository: cambium-protocol/cambium-sdk
-          path: cambium-sdk
       - uses: pnpm/action-setup@v4
         with:
           version: 11
@@ -49,23 +34,14 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: web-app/pnpm-lock.yaml
       - run: pnpm install --no-frozen-lockfile
-        working-directory: web-app
       - run: pnpm build
-        working-directory: web-app
 
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: web-app
-      - uses: actions/checkout@v4
-        with:
-          repository: cambium-protocol/cambium-sdk
-          path: cambium-sdk
       - uses: pnpm/action-setup@v4
         with:
           version: 11
@@ -73,8 +49,5 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: web-app/pnpm-lock.yaml
       - run: pnpm install --no-frozen-lockfile
-        working-directory: web-app
       - run: pnpm test
-        working-directory: web-app
