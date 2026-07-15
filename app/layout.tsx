@@ -39,6 +39,9 @@ export default function RootLayout({
                 <Link href="/portfolio" className="text-sm text-gray-600 hover:text-gray-900">
                   Portfolio
                 </Link>
+                <Link href="/ledger" className="text-sm text-gray-600 hover:text-gray-900">
+                  Ledger
+                </Link>
               </div>
               <ConnectWallet />
             </div>
