@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Skeleton, ProjectCardSkeleton, ProjectDetailSkeleton } from '@/components/ui/Skeleton';
-import { ToastProvider, useToast } from '@/lib/hooks/useToast';
+import { ToastProvider } from '@/lib/hooks/useToast';
 import PortfolioPage from '@/app/portfolio/page';
 import LedgerPage from '@/app/ledger/page';
 import RetirePage from '@/app/retire/page';
