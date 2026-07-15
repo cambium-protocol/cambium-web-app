@@ -1,9 +1,6 @@
 # Dependencies
 node_modules/
 
-# pnpm config (not workspace definitions)
-pnpm-workspace.yaml
-
 # Build output
 .next/
 out/
