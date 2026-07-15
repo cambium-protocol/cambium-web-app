@@ -36,6 +36,9 @@ export default function RootLayout({
                 <Link href="/retire" className="text-sm text-gray-600 hover:text-gray-900">
                   Retire
                 </Link>
+                <Link href="/portfolio" className="text-sm text-gray-600 hover:text-gray-900">
+                  Portfolio
+                </Link>
               </div>
               <ConnectWallet />
             </div>
