@@ -41,6 +41,23 @@ export function addressFromScVal(scv: xdr.ScVal): string {
 }
 
 /**
+ * Format a fixed-point integer (scaled by 10^7) as a trimmed decimal string,
+ * e.g. `15000000n` -> `"1.5"`.
+ */
+export function fixedPointToString(raw: bigint): string {
+  const negative = raw < BigInt(0);
+  const abs = raw < BigInt(0) ? -raw : raw;
+  const whole = abs / FIXED_POINT_SCALE;
+  const frac = abs % FIXED_POINT_SCALE;
+  let result = whole.toString();
+  if (frac !== BigInt(0)) {
+    const padded = frac.toString().padStart(7, '0').replace(/0+$/, '');
+    result = `${result}.${padded}`;
+  }
+  return negative ? `-${result}` : result;
+}
+
+/**
  * Decode a fixed-point amount (i128/u64, scaled by 10^7) into a trimmed
  * decimal string, e.g. `1.5000000` -> `"1.5"`. Amounts with trailing zeros
  * are trimmed; the scale matches Stellar's native i128/i256 encoding.
@@ -54,17 +71,7 @@ export function amountFromScVal(scv: xdr.ScVal): string {
     const text = String(scv.str() ?? scv.sym());
     return Number.isNaN(Number(text)) ? '0' : text;
   }
-  const raw = scvalToBigIntSafe(scv);
-  const negative = raw < BigInt(0);
-  const abs = raw < BigInt(0) ? -raw : raw;
-  const whole = abs / FIXED_POINT_SCALE;
-  const frac = abs % FIXED_POINT_SCALE;
-  let result = whole.toString();
-  if (frac !== BigInt(0)) {
-    const padded = frac.toString().padStart(7, '0').replace(/0+$/, '');
-    result = `${result}.${padded}`;
-  }
-  return negative ? `-${result}` : result;
+  return fixedPointToString(scvalToBigIntSafe(scv));
 }
 
 /** Decode an ScVal into a human-readable string (for display and search). */

@@ -1,5 +1,6 @@
 export {
   FIXED_POINT_SCALE,
+  fixedPointToString,
   scvalArm,
   isScval,
   scvalToBigIntSafe,
