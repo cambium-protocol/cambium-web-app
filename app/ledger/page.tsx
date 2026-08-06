@@ -62,6 +62,17 @@ export default function LedgerPage() {
           Public record of all retired carbon credits. Every retirement is
           independently verifiable on-chain.
         </p>
+        <p className="mt-2 text-xs text-gray-400">
+          Machine-readable:{' '}
+          <Link
+            href="/api/ledger"
+            className="font-mono text-green-600 hover:text-green-700"
+          >
+            /api/ledger
+          </Link>{' '}
+          · verify one record:{' '}
+          <span className="font-mono">/api/retirements/&lt;id&gt;</span>
+        </p>
       </div>
 
       {entries && entries.length > 0 && (
