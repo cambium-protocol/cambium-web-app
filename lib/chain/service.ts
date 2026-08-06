@@ -116,6 +116,30 @@ export async function getRetirementsByRetiree(
 }
 
 /**
+ * Look up the retirement record emitted by a specific transaction hash.
+ * Used by the retire flow to surface the on-chain record (and its ID) in the
+ * confirmation screen once the transaction lands.
+ */
+export async function getRetirementByTxHash(
+  txHash: string,
+): Promise<RetirementRecord | null> {
+  const client = getCambiumClient();
+  const indexer = new ChainEventIndexer({
+    server: client.server,
+    ...indexerOptions(client.contracts.retirement, RETIRE_EVENT_NAME),
+  });
+  const { events } = await indexer.fetchRawEvents();
+  const needle = txHash.toLowerCase();
+  const match = events
+    .map(decodeRetirementEvent)
+    .find(
+      (evt): evt is RetirementEvent =>
+        evt !== null && evt.txHash.toLowerCase() === needle,
+    );
+  return match ? toRetirementRecord(match) : null;
+}
+
+/**
  * Recent credit-token transfers involving an address, newest first. Used by
  * the portfolio page to show held/traded activity derived from on-chain
  * SEP-41 transfer events.

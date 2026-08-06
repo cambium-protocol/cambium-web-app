@@ -33,4 +33,5 @@ export {
   getRegisteredProjects,
   getRetirementsByRetiree,
   getCreditTransfers,
+  getRetirementByTxHash,
 } from './service';

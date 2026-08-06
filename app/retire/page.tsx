@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMemo, useState, Suspense } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { getCambiumClient } from '@/lib/cambiumClient';
+import { getRetirementByTxHash } from '@/lib/chain';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useToast } from '@/lib/hooks/useToast';
+import { formatAmount, formatDate, shortAddress } from '@/lib/format';
 import type { RetirementRecord } from '@cambium-protocol/sdk';
 
 function isValidYear(value: string): boolean {
@@ -21,16 +25,51 @@ function isValidAmount(value: string): boolean {
 }
 
 export default function RetirePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-lg space-y-6">
+          <h1 className="text-2xl font-bold text-gray-900">Retire Credits</h1>
+          <div className="h-64 animate-pulse rounded-lg bg-gray-200" />
+        </div>
+      }
+    >
+      <RetireForm />
+    </Suspense>
+  );
+}
+
+function RetireForm() {
   const { connected, address, signTransaction } = useWallet();
   const { addToast } = useToast();
-  const [projectId, setProjectId] = useState('');
+  const searchParams = useSearchParams();
+  const prefilledProjectId = searchParams?.get('projectId') ?? '';
+
+  const [projectId, setProjectId] = useState(prefilledProjectId);
   const [vintageYear, setVintageYear] = useState('');
   const [amount, setAmount] = useState('');
-  const [retireResult, setRetireResult] = useState<{
-    success: boolean;
-    record?: RetirementRecord;
-    message: string;
+  const [confirmation, setConfirmation] = useState<{
+    txHash: string;
+    record: RetirementRecord | null;
+    searching: boolean;
   } | null>(null);
+
+  const projectQuery = useQuery<{ id: string; methodology: string } | null>({
+    queryKey: ['retire-prefill', prefilledProjectId],
+    queryFn: async () => {
+      if (!prefilledProjectId) return null;
+      const client = getCambiumClient();
+      try {
+        const project = await client.registry.getProject(prefilledProjectId);
+        return { id: project.id, methodology: project.methodology };
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!prefilledProjectId,
+  });
+
+  const prefilledProject = useMemo(() => projectQuery.data, [projectQuery.data]);
 
   const projectIdValid = projectId.length > 0;
   const vintageYearValid = isValidYear(vintageYear);
@@ -50,22 +89,26 @@ export default function RetirePage() {
       });
       const signedXdr = await signTransaction(tx.toXDR());
       const result = await client.submit(signedXdr);
-      return result;
+      const txHash = result.hash;
+      if (!txHash) {
+        throw new Error('Transaction submitted but no hash was returned');
+      }
+      return txHash;
     },
-    onSuccess: (data: any) => {
-      const record = data?.record || data?.retirementRecord;
-      setRetireResult({
-        success: true,
-        record,
-        message: 'Credits retired successfully.',
-      });
-      addToast('success', 'Credits retired successfully.');
+    onSuccess: async (txHash: string) => {
+      addToast('success', 'Retirement transaction submitted.');
+      setConfirmation({ txHash, record: null, searching: true });
       setProjectId('');
       setVintageYear('');
       setAmount('');
+      try {
+        const record = await getRetirementByTxHash(txHash);
+        setConfirmation({ txHash, record, searching: false });
+      } catch {
+        setConfirmation({ txHash, record: null, searching: false });
+      }
     },
     onError: (err: Error) => {
-      setRetireResult({ success: false, message: err.message });
       addToast('error', err.message);
     },
   });
@@ -86,6 +129,17 @@ export default function RetirePage() {
             placeholder="0x..."
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
+          {prefilledProject && (
+            <p className="mt-1 text-xs text-gray-500">
+              Prefilled from{' '}
+              <Link
+                href={`/projects/${prefilledProject.id}`}
+                className="text-green-600 hover:text-green-700"
+              >
+                {prefilledProject.methodology}
+              </Link>
+            </p>
+          )}
           {projectId.length > 0 && !projectIdValid && (
             <p className="mt-1 text-xs text-red-600">Project ID is required</p>
           )}
@@ -155,13 +209,73 @@ export default function RetirePage() {
         </button>
       </div>
 
-      {retireResult && retireResult.success && retireResult.record && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          <p className="font-medium">{retireResult.message}</p>
-          <div className="mt-2 border-t border-green-200 pt-2 text-xs">
-            <p>Retirement ID: {retireResult.record.id}</p>
-            <p>Amount: {retireResult.record.amount} tCO2e</p>
-            <p>Year: {retireResult.record.vintageYear}</p>
+      {retireMutation.error && (
+        <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+          {retireMutation.error.message}
+        </div>
+      )}
+
+      {confirmation && (
+        <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+          <p className="font-medium">Retirement submitted.</p>
+          <div className="mt-2 space-y-1 border-t border-green-200 pt-2 text-xs">
+            <p>
+              Transaction:{' '}
+              <span className="font-mono">{shortAddress(confirmation.txHash, 12, 8)}</span>
+            </p>
+            {confirmation.searching && (
+              <p className="text-green-600">
+                Locating the on-chain retirement record…
+              </p>
+            )}
+            {!confirmation.searching &&
+              (confirmation.record ? (
+                <>
+                  <p>
+                    Retirement ID:{' '}
+                    <span className="font-mono">
+                      {shortAddress(confirmation.record.id, 12, 8)}
+                    </span>
+                  </p>
+                  <p>
+                    Amount:{' '}
+                    <span className="font-medium">
+                      {formatAmount(confirmation.record.amount)} tCO2e
+                    </span>
+                  </p>
+                  <p>
+                    Vintage:{' '}
+                    <span className="font-medium">
+                      {confirmation.record.vintageYear}
+                    </span>
+                  </p>
+                  <p>
+                    Retired at:{' '}
+                    <span className="font-medium">
+                      {formatDate(confirmation.record.retiredAt)}
+                    </span>
+                  </p>
+                </>
+              ) : (
+                <p className="text-yellow-700">
+                  The record is not visible in the scanned event range yet. It
+                  will appear on the ledger once the indexer catches up.
+                </p>
+              ))}
+          </div>
+          <div className="mt-3 flex gap-3 border-t border-green-200 pt-3 text-xs">
+            <Link
+              href="/ledger"
+              className="font-medium text-green-700 hover:underline"
+            >
+              View retirement ledger
+            </Link>
+            <Link
+              href="/portfolio"
+              className="font-medium text-green-700 hover:underline"
+            >
+              View portfolio
+            </Link>
           </div>
         </div>
       )}
