@@ -106,10 +106,10 @@ describe('Ledger page', () => {
     ]);
     render(withProviders(<LedgerPage />));
     await waitFor(() => {
-      expect(screen.getByText('2025')).toBeInTheDocument();
+      expect(screen.getByText('Total Retirements')).toBeInTheDocument();
     });
-    expect(screen.getByText('Total Retirements')).toBeInTheDocument();
     expect(screen.getAllByText(/1\.5 tCO2e/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('2025').length).toBeGreaterThan(0);
   });
 
   it('shows the empty state when there are no records', async () => {
