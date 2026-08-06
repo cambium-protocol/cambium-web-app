@@ -264,6 +264,14 @@ function RetireForm() {
               ))}
           </div>
           <div className="mt-3 flex gap-3 border-t border-green-200 pt-3 text-xs">
+            {confirmation.record && (
+              <a
+                href={`/api/certificates/${confirmation.record.id}`}
+                className="font-medium text-green-700 hover:underline"
+              >
+                Download certificate (PDF)
+              </a>
+            )}
             <Link
               href="/ledger"
               className="font-medium text-green-700 hover:underline"
