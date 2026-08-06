@@ -26,3 +26,9 @@ export {
   decodeTransferEvent,
   decodeContractEvent,
 } from './events';
+export { ChainEventIndexer, type ChainIndexerOptions, type IndexedEvents } from './indexer';
+export {
+  getRetirementLedger,
+  getRegisteredProjects,
+  getRetirementsByRetiree,
+} from './service';
