@@ -73,15 +73,30 @@ web-app/
 │   │   └── page.tsx
 │   ├── ledger/
 │   │   └── page.tsx                # public retirement ledger
+│   ├── api/
+│   │   ├── ledger/route.ts         # public retirement ledger JSON API
+│   │   ├── retirements/[id]/route.ts  # single-record verification
+│   │   └── certificates/[id]/route.ts # PDF retirement certificate
 │   ├── layout.tsx
 │   └── providers.tsx
 ├── components/
 │   ├── wallet/
 │   │   └── ConnectWallet.tsx
 │   └── ui/
-│       └── Skeleton.tsx
+│       ├── Badge.tsx
+│       ├── Skeleton.tsx
+│       └── StatCard.tsx
 ├── lib/
 │   ├── cambiumClient.ts             # sdk-js client instance + config
+│   ├── chain/
+│   │   ├── scval.ts                 # ScVal decoding helpers
+│   │   ├── events.ts                # protocol event decoders
+│   │   ├── indexer.ts               # self-contained event indexer
+│   │   └── service.ts               # app data services over on-chain events
+│   ├── registry/vintages.ts         # vintage supply probing + fixed-point math
+│   ├── ledger/filter.ts             # ledger search/filter helpers
+│   ├── projects/filter.ts           # project explorer search/filter helpers
+│   ├── format.ts                    # address/amount/date formatting
 │   └── hooks/
 │       ├── useWallet.ts
 │       └── useToast.tsx
@@ -134,9 +149,19 @@ NEXT_PUBLIC_RETIREMENT_CONTRACT_ID=CDIHLUARSMSYU27QRKXBWVK5HXIJRUAQ3SYQYCK3MZ2UK
 
 # Optional: only needed if enabling shielded retirement in the UI
 NEXT_PUBLIC_ZK_PROVING_SERVICE_URL=
+
+# Optional: on-chain event indexer tuning (see lib/chain/service.ts).
+# How many recent ledgers to scan for protocol events. Higher values cover
+# more history at the cost of RPC round-trips.
+NEXT_PUBLIC_CHAIN_INDEX_WINDOW=200000
+# Optional: force the scan to start at a specific ledger (defaults to the
+# oldest ledger the RPC provider still serves).
+NEXT_PUBLIC_CHAIN_INDEX_START_LEDGER=
 ```
 
 Contract addresses should match the output of `contracts`' `scripts/deploy.sh` for whichever network you're targeting.
+
+> **Data sourcing.** Soroban contracts don't support iterating over their storage, so the SDK's `listProjects`/`listRetirements` can't enumerate records. This app instead indexes the protocol's own on-chain events (`register_project`, `retire`, SEP-41 `transfer`) straight from the RPC endpoint with a self-contained indexer — no database or third-party indexer required. The ledger, portfolio, and project pages all read from this event feed.
 
 ---
 
@@ -225,18 +250,20 @@ No server-side secrets are required beyond standard analytics/monitoring keys �
 | Page | Status |
 |---|---|
 | Landing / marketing | Working — renders, links to Projects/Trade/Retire |
-| Project explorer | Working — loads projects from registry via SDK |
-| Project detail + proof transparency | Working — shows methodology version, verifying key from on-chain data |
+| Project explorer | Working — loads projects from on-chain registry events, with search and filters |
+| Project detail + proof transparency | Working — methodology, geography, verifying key, and per-vintage supply from on-chain data |
 | Trade (AMM swap) | Working — quotes, builds swap tx, submits via wallet |
 | Trade (limit orders) | Coming Soon — `placeLimitOrder` / `cancelOrder` not yet in SDK |
-| Retire | Scaffolded — UI renders "Coming Soon" toggle for shielded retirement; public retirement builds unsigned tx via SDK |
-| Portfolio dashboard | Scaffolded — renders holdings table, needs SDK integration |
-| Public retirement ledger | Scaffolded — renders retirement list, needs SDK integration |
+| Retire | Working — builds tx via SDK, signs with wallet, submits, and confirms against the on-chain retirement record; PDF certificate download |
+| Portfolio dashboard | Working — balance via `credits.balanceOf`, retirement history and transfer activity from on-chain events |
+| Public retirement ledger | Working — searchable/filterable table sourced from on-chain retirement events; JSON API + single-record verification |
 
 | Infrastructure | Status |
 |---|---|
 | Wallet connection (Freighter etc.) | Working via Stellar Wallets Kit |
-| Unit tests (Vitest) | 10/10 passing |
+| Public API | Working — `GET /api/ledger` and `GET /api/retirements/:id` |
+| Retirement certificates | Working — `GET /api/certificates/:id` returns a PDF |
+| Unit tests (Vitest) | 65/65 passing |
 | E2E tests (Playwright) | Scaffolded, requires browser install in CI |
 
 ---
@@ -245,10 +272,10 @@ No server-side secrets are required beyond standard analytics/monitoring keys �
 
 - [x] Implement portfolio dashboard page
 - [x] Implement public retirement ledger page
-- [ ] Wire up retirement flow end-to-end (unsigned tx → wallet sign → submit → certificate)
+- [x] Wire up retirement flow end-to-end (unsigned tx → wallet sign → submit → confirmation → certificate)
+- [x] Public API for the retirement ledger (JSON feed + single-record verification)
 - [ ] Add Recharts integration for live price charts
 - [ ] Multi-wallet support via Stellar Wallets Kit
-- [ ] Public API/embeddable widget for the retirement ledger (so third parties can display verified retirements on their own sites)
 - [ ] Mobile-optimized retirement certificate sharing
 - [ ] Localization beyond English
 - [ ] In-app dispute-flagging UI wired to `oracle-node`'s dispute endpoint
