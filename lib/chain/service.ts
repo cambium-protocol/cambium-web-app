@@ -4,10 +4,13 @@ import { ChainEventIndexer } from './indexer';
 import {
   decodeProjectEvent,
   decodeRetirementEvent,
+  decodeTransferEvent,
   REGISTER_PROJECT_EVENT_NAME,
   RETIRE_EVENT_NAME,
+  TRANSFER_EVENT_NAME,
   type ProjectEvent,
   type RetirementEvent,
+  type TransferEvent,
 } from './events';
 
 /**
@@ -110,4 +113,29 @@ export async function getRetirementsByRetiree(
       record.retiree.type === 'public' &&
       record.retiree.address.toLowerCase() === address.toLowerCase(),
   );
+}
+
+/**
+ * Recent credit-token transfers involving an address, newest first. Used by
+ * the portfolio page to show held/traded activity derived from on-chain
+ * SEP-41 transfer events.
+ */
+export async function getCreditTransfers(
+  address: string,
+): Promise<TransferEvent[]> {
+  const client = getCambiumClient();
+  const indexer = new ChainEventIndexer({
+    server: client.server,
+    ...indexerOptions(client.contracts.creditToken, TRANSFER_EVENT_NAME),
+  });
+  const { events } = await indexer.fetchRawEvents();
+  const needle = address.toLowerCase();
+  return events
+    .map(decodeTransferEvent)
+    .filter((evt): evt is TransferEvent => evt !== null)
+    .filter(
+      (evt) =>
+        evt.from.toLowerCase() === needle || evt.to.toLowerCase() === needle,
+    )
+    .sort((a, b) => b.ledger - a.ledger);
 }

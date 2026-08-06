@@ -32,4 +32,5 @@ export {
   getRetirementLedger,
   getRegisteredProjects,
   getRetirementsByRetiree,
+  getCreditTransfers,
 } from './service';
