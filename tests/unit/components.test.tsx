@@ -1,11 +1,21 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Skeleton, ProjectCardSkeleton, ProjectDetailSkeleton } from '@/components/ui/Skeleton';
 import { ToastProvider } from '@/lib/hooks/useToast';
 import PortfolioPage from '@/app/portfolio/page';
 import LedgerPage from '@/app/ledger/page';
 import RetirePage from '@/app/retire/page';
+
+vi.mock('@/lib/chain', () => ({
+  getRetirementLedger: vi.fn(),
+  getRegisteredProjects: vi.fn(),
+  getRetirementsByRetiree: vi.fn(),
+}));
+
+import { getRetirementLedger } from '@/lib/chain';
+
+const ACCOUNT = 'GD5ATW7EKDOTEDZRKLRBO4CBORU5BAX5HND3KRCAPM3AS4JMB5MHK7BJ';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -65,16 +75,51 @@ describe('Portfolio page', () => {
 });
 
 describe('Ledger page', () => {
+  beforeEach(() => {
+    vi.mocked(getRetirementLedger).mockReset();
+  });
+
   it('renders the ledger title', () => {
+    vi.mocked(getRetirementLedger).mockResolvedValue([]);
     render(withProviders(<LedgerPage />));
     expect(screen.getByText('Retirement Ledger')).toBeInTheDocument();
   });
 
   it('shows description text', () => {
+    vi.mocked(getRetirementLedger).mockResolvedValue([]);
     render(withProviders(<LedgerPage />));
     expect(
       screen.getByText(/Public record of all retired carbon credits/),
     ).toBeInTheDocument();
+  });
+
+  it('renders retirement records from on-chain events', async () => {
+    vi.mocked(getRetirementLedger).mockResolvedValue([
+      {
+        id: 'ret-1',
+        projectId: ACCOUNT,
+        vintageYear: 2025,
+        amount: '1.5',
+        retiredAt: 1712345678,
+        retiree: { type: 'public', address: ACCOUNT },
+      },
+    ]);
+    render(withProviders(<LedgerPage />));
+    await waitFor(() => {
+      expect(screen.getByText('2025')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Total Retirements')).toBeInTheDocument();
+    expect(screen.getAllByText(/1\.5 tCO2e/).length).toBeGreaterThan(0);
+  });
+
+  it('shows the empty state when there are no records', async () => {
+    vi.mocked(getRetirementLedger).mockResolvedValue([]);
+    render(withProviders(<LedgerPage />));
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No retirement records found in the scanned ledger range/),
+      ).toBeInTheDocument();
+    });
   });
 });
 

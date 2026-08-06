@@ -2,18 +2,23 @@
 
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { getCambiumClient } from '@/lib/cambiumClient';
+import { getRetirementLedger } from '@/lib/chain';
 import { ProjectCardSkeleton } from '@/components/ui/Skeleton';
+import { Badge } from '@/components/ui/Badge';
+import { StatCard } from '@/components/ui/StatCard';
+import { formatAmount, formatDate, shortAddress } from '@/lib/format';
 import type { RetirementRecord } from '@cambium-protocol/sdk';
 
 export default function LedgerPage() {
   const { data: entries, isLoading, error } = useQuery<RetirementRecord[]>({
     queryKey: ['ledger'],
-    queryFn: async () => {
-      const client = getCambiumClient();
-      return client.retirement.listRetirements();
-    },
+    queryFn: getRetirementLedger,
   });
+
+  const totalRetired = entries?.reduce(
+    (sum, entry) => sum + Number(entry.amount),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -25,6 +30,23 @@ export default function LedgerPage() {
         </p>
       </div>
 
+      {entries && entries.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard
+            label="Total Retirements"
+            value={entries.length.toLocaleString()}
+          />
+          <StatCard
+            label="Total Retired"
+            value={`${formatAmount(totalRetired?.toString() ?? '0')} tCO2e`}
+          />
+          <StatCard
+            label="Projects Retired Against"
+            value={new Set(entries.map((e) => e.projectId)).size.toLocaleString()}
+          />
+        </div>
+      )}
+
       {isLoading && (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -35,13 +57,16 @@ export default function LedgerPage() {
 
       {error && (
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-          Failed to load retirement ledger. Check your network connection.
+          Failed to load retirement ledger from the chain. Check your network
+          connection and contract configuration.
         </div>
       )}
 
       {entries && entries.length === 0 && (
         <div className="rounded-lg border border-gray-200 py-12 text-center">
-          <p className="text-gray-500">No retirements recorded yet.</p>
+          <p className="text-gray-500">
+            No retirement records found in the scanned ledger range.
+          </p>
           <Link
             href="/retire"
             className="mt-4 inline-block text-sm font-medium text-green-600 hover:text-green-700"
@@ -67,26 +92,40 @@ export default function LedgerPage() {
             <tbody className="divide-y divide-gray-200">
               {entries.map((entry) => (
                 <tr key={entry.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                    {entry.id.slice(0, 12)}...
+                  <td className="px-4 py-3">
+                    <span
+                      className="font-mono text-xs text-gray-600"
+                      title={entry.id}
+                    >
+                      {shortAddress(entry.id, 10, 6)}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <Link
                       href={`/projects/${entry.projectId}`}
                       className="font-medium text-green-600 hover:text-green-700"
                     >
-                      {entry.projectId.slice(0, 12)}...
+                      {shortAddress(entry.projectId, 10, 6)}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 font-medium">{entry.amount} tCO2e</td>
+                  <td className="px-4 py-3 font-medium">
+                    {formatAmount(entry.amount)} tCO2e
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{entry.vintageYear}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                    {entry.retiree.type === 'public'
-                      ? `${entry.retiree.address.slice(0, 8)}...`
-                      : 'Shielded'}
+                  <td className="px-4 py-3">
+                    {entry.retiree.type === 'public' ? (
+                      <span
+                        className="font-mono text-xs text-gray-600"
+                        title={entry.retiree.address}
+                      >
+                        {shortAddress(entry.retiree.address)}
+                      </span>
+                    ) : (
+                      <Badge tone="violet">Shielded</Badge>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {new Date(entry.retiredAt * 1000).toLocaleDateString()}
+                    {formatDate(entry.retiredAt)}
                   </td>
                 </tr>
               ))}
