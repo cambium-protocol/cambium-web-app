@@ -34,4 +34,7 @@ export {
   getRetirementsByRetiree,
   getCreditTransfers,
   getRetirementByTxHash,
+  getProtocolStats,
+  clearDataCache,
+  type ProtocolStats,
 } from './service';
