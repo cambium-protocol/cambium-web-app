@@ -4,11 +4,18 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { getRegisteredProjects } from '@/lib/chain';
-import { filterProjects } from '@/lib/projects/filter';
+import {
+  filterProjects,
+  availableMethodologies,
+  availableGeographies,
+} from '@/lib/projects/filter';
 import { ProjectCardSkeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { shortAddress } from '@/lib/format';
 import type { Project } from '@cambium-protocol/sdk';
+
+const selectClass =
+  'rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700';
 
 export default function ProjectsPage() {
   const { data: projects, isLoading, error } = useQuery<Project[]>({
@@ -17,11 +24,31 @@ export default function ProjectsPage() {
   });
 
   const [query, setQuery] = useState('');
+  const [methodology, setMethodology] = useState('');
+  const [geography, setGeography] = useState('');
+
+  const methodologies = useMemo(
+    () => availableMethodologies(projects ?? []),
+    [projects],
+  );
+  const geographies = useMemo(
+    () => availableGeographies(projects ?? []),
+    [projects],
+  );
 
   const filtered = useMemo(
-    () => filterProjects(projects ?? [], query),
-    [projects, query],
+    () =>
+      filterProjects(projects ?? [], query, { methodology, geography }),
+    [projects, query, methodology, geography],
   );
+
+  const hasFilters = !!(query || methodology || geography);
+
+  function resetFilters() {
+    setQuery('');
+    setMethodology('');
+    setGeography('');
+  }
 
   return (
     <div className="space-y-6">
@@ -62,10 +89,71 @@ export default function ProjectsPage() {
 
       {projects && projects.length > 0 && (
         <>
+          <div className="flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 p-4">
+            <div>
+              <label
+                htmlFor="projects-methodology"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Methodology
+              </label>
+              <select
+                id="projects-methodology"
+                value={methodology}
+                onChange={(e) => setMethodology(e.target.value)}
+                className={selectClass}
+              >
+                <option value="">All methodologies</option>
+                {methodologies.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="projects-geography"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Geography
+              </label>
+              <select
+                id="projects-geography"
+                value={geography}
+                onChange={(e) => setGeography(e.target.value)}
+                className={selectClass}
+              >
+                <option value="">All geographies</option>
+                {geographies.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {hasFilters && (
+              <button
+                onClick={resetFilters}
+                className="rounded-md px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+
+          <p className="text-sm text-gray-500">
+            Showing{' '}
+            <span className="font-medium text-gray-900">{filtered.length}</span>{' '}
+            of {projects.length} projects
+          </p>
+
           {filtered.length === 0 ? (
             <div className="rounded-lg border border-gray-200 py-12 text-center">
               <p className="text-gray-500">
-                No projects match the current search.
+                No projects match the current filters.
               </p>
             </div>
           ) : (

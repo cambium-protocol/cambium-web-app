@@ -24,6 +24,13 @@ function withProviders(ui: React.ReactNode) {
 
 const projects: Project[] = [
   { id: ACCOUNT, methodology: 'ARR', geography: 'Kenya', verifyingKeyVersion: 1 },
+  {
+    id: 'GA4GASG6WYK6W3FQZPZ4V2EOSVYNCP2DWLDUHMS2B5MX6MYL7G4AFEOR',
+    methodology: 'REDD+',
+    geography: 'Brazil',
+    externalRegistryRef: 'VCS-123',
+    verifyingKeyVersion: 2,
+  },
 ];
 
 describe('Projects page', () => {
@@ -44,9 +51,12 @@ describe('Projects page', () => {
     vi.mocked(getRegisteredProjects).mockResolvedValue(projects);
     render(withProviders(<ProjectsPage />));
     await waitFor(() => {
-      expect(screen.getByText('ARR')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'ARR' })).toBeInTheDocument();
     });
-    expect(screen.getByText('Kenya')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'REDD+' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Kenya').length).toBeGreaterThan(0);
   });
 
   it('filters projects by search query', async () => {
@@ -54,11 +64,11 @@ describe('Projects page', () => {
     render(withProviders(<ProjectsPage />));
     const input = await screen.findByLabelText('Search projects');
     await waitFor(() => {
-      expect(screen.getByText('ARR')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'ARR' })).toBeInTheDocument();
     });
     fireEvent.change(input, { target: { value: 'zzz' } });
     expect(
-      screen.getByText(/No projects match the current search/),
+      screen.getByText(/No projects match the current filters/),
     ).toBeInTheDocument();
   });
 
@@ -67,6 +77,57 @@ describe('Projects page', () => {
     render(withProviders(<ProjectsPage />));
     await waitFor(() => {
       expect(screen.getByText('No projects registered yet.')).toBeInTheDocument();
+    });
+  });
+
+  it('filters projects by methodology and geography selects', async () => {
+    vi.mocked(getRegisteredProjects).mockResolvedValue(projects);
+    render(withProviders(<ProjectsPage />));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'ARR' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Methodology'), {
+      target: { value: 'REDD+' },
+    });
+    expect(screen.getByRole('heading', { name: 'REDD+' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'ARR' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Geography'), {
+      target: { value: 'Brazil' },
+    });
+    expect(
+      screen.getByRole('heading', { name: 'REDD+' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'ARR' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Geography'), {
+      target: { value: 'Kenya' },
+    });
+    expect(
+      screen.getByText(/No projects match the current filters/),
+    ).toBeInTheDocument();
+  });
+
+  it('clears all filters at once', async () => {
+    vi.mocked(getRegisteredProjects).mockResolvedValue(projects);
+    render(withProviders(<ProjectsPage />));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'ARR' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Methodology'), {
+      target: { value: 'REDD+' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'ARR' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'REDD+' })).toBeInTheDocument();
     });
   });
 });

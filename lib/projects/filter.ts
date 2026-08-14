@@ -1,19 +1,36 @@
 import type { Project } from '@cambium-protocol/sdk';
 
+export interface ProjectFilters {
+  methodology?: string;
+  geography?: string;
+}
+
 /** Case-insensitive match against methodology, geography, ref, and ID. */
-export function filterProjects(projects: Project[], query: string): Project[] {
+export function filterProjects(
+  projects: Project[],
+  query: string,
+  filters: ProjectFilters = {},
+): Project[] {
   const q = query.trim().toLowerCase();
-  if (!q) return projects;
   return projects.filter((project) => {
-    const haystack = [
-      project.methodology,
-      project.geography,
-      project.externalRegistryRef ?? '',
-      project.id,
-    ]
-      .join(' ')
-      .toLowerCase();
-    return haystack.includes(q);
+    if (filters.methodology && project.methodology !== filters.methodology) {
+      return false;
+    }
+    if (filters.geography && project.geography !== filters.geography) {
+      return false;
+    }
+    if (q) {
+      const haystack = [
+        project.methodology,
+        project.geography,
+        project.externalRegistryRef ?? '',
+        project.id,
+      ]
+        .join(' ')
+        .toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
   });
 }
 

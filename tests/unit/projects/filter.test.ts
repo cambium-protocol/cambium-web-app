@@ -44,6 +44,36 @@ describe('filterProjects', () => {
   it('returns no results for an unmatched query', () => {
     expect(filterProjects(projects, 'nope')).toHaveLength(0);
   });
+
+  it('filters by methodology exactly', () => {
+    expect(filterProjects(projects, '', { methodology: 'ARR' })).toHaveLength(
+      2,
+    );
+    expect(filterProjects(projects, '', { methodology: 'REDD+' })).toHaveLength(
+      1,
+    );
+    expect(filterProjects(projects, '', { methodology: 'None' })).toHaveLength(
+      0,
+    );
+  });
+
+  it('filters by geography exactly', () => {
+    expect(filterProjects(projects, '', { geography: 'Kenya' })).toHaveLength(
+      2,
+    );
+    expect(filterProjects(projects, '', { geography: 'Brazil' })).toHaveLength(
+      1,
+    );
+  });
+
+  it('combines methodology, geography, and search', () => {
+    expect(
+      filterProjects(projects, 'redd', { geography: 'Brazil' }),
+    ).toHaveLength(1);
+    expect(filterProjects(projects, 'arr', { geography: 'Brazil' })).toHaveLength(
+      0,
+    );
+  });
 });
 
 describe('availableMethodologies', () => {
