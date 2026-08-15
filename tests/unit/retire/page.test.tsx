@@ -20,11 +20,13 @@ vi.mock('@/lib/cambiumClient', () => ({
 
 vi.mock('@/lib/chain', () => ({
   getRetirementByTxHash: vi.fn(),
+  getRegisteredProjects: vi.fn(),
+  clearDataCache: vi.fn(),
 }));
 
 import { useWallet } from '@/lib/hooks/useWallet';
 import { getCambiumClient } from '@/lib/cambiumClient';
-import { getRetirementByTxHash } from '@/lib/chain';
+import { getRetirementByTxHash, getRegisteredProjects } from '@/lib/chain';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
@@ -39,6 +41,7 @@ describe('Retire page', () => {
     vi.mocked(getCambiumClient).mockReset();
     vi.mocked(getRetirementByTxHash).mockReset();
     vi.mocked(getRetirementByTxHash).mockResolvedValue(null);
+    vi.mocked(getRegisteredProjects).mockResolvedValue([]);
   });
 
   it('requires a connected wallet before retiring', () => {
@@ -116,5 +119,61 @@ describe('Retire page', () => {
       expect(screen.getByText('Retirement submitted.')).toBeInTheDocument();
     });
     expect(screen.getByText(/1 tCO2e/)).toBeInTheDocument();
+  });
+
+  it('prefills project and vintage from the registry-backed selectors', async () => {
+    vi.mocked(useWallet).mockReturnValue({
+      connected: true,
+      address: ACCOUNT,
+      loading: false,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      signTransaction: vi.fn(async () => 'signed-xdr'),
+    });
+
+    vi.mocked(getRegisteredProjects).mockResolvedValue([
+      {
+        id: PROJECT,
+        methodology: 'Verra VM001',
+        geography: 'Kenya',
+        verifyingKeyVersion: 1,
+      },
+    ]);
+
+    const client = {
+      retirement: {
+        retire: vi.fn(async () => ({ toXDR: () => 'unsigned-xdr' })),
+      },
+      submit: vi.fn(async () => ({ hash: 'tx-hash-123' })),
+      registry: {
+        getProject: vi.fn(async () => ({
+          id: PROJECT,
+          methodology: 'Verra VM001',
+        })),
+        getVintage: vi.fn(async (id: string, year: number) => ({
+          projectId: id,
+          year,
+          totalIssued: '100',
+          totalRetired: '0',
+        })),
+      },
+    };
+    vi.mocked(getCambiumClient).mockReturnValue(
+      client as unknown as ReturnType<typeof getCambiumClient>,
+    );
+
+    render(withProviders(<RetirePage />));
+
+    const projectSelect = await screen.findByLabelText('Project');
+    fireEvent.change(projectSelect, { target: { value: PROJECT } });
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('0x...')).toHaveValue(PROJECT);
+    });
+
+    const vintageSelect = await screen.findByLabelText('Vintage Year');
+    fireEvent.change(vintageSelect, { target: { value: '2025' } });
+
+    expect(screen.getByPlaceholderText('2025')).toHaveValue('2025');
   });
 });

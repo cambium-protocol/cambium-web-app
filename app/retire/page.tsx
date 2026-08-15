@@ -5,11 +5,16 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { getCambiumClient } from '@/lib/cambiumClient';
-import { getRetirementByTxHash } from '@/lib/chain';
+import {
+  getRegisteredProjects,
+  getRetirementByTxHash,
+  clearDataCache,
+} from '@/lib/chain';
+import { fetchVintageSupply } from '@/lib/registry/vintages';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useToast } from '@/lib/hooks/useToast';
 import { formatAmount, formatDate, shortAddress } from '@/lib/format';
-import type { RetirementRecord } from '@cambium-protocol/sdk';
+import type { Project, RetirementRecord, Vintage } from '@cambium-protocol/sdk';
 
 function isValidYear(value: string): boolean {
   if (!value) return false;
@@ -71,6 +76,23 @@ function RetireForm() {
 
   const prefilledProject = useMemo(() => projectQuery.data, [projectQuery.data]);
 
+  const projectsQuery = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: getRegisteredProjects,
+  });
+
+  const vintagesQuery = useQuery<Vintage[]>({
+    queryKey: ['vintages', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+      const client = getCambiumClient();
+      return fetchVintageSupply((year) =>
+        client.registry.getVintage(projectId, year),
+      );
+    },
+    enabled: projectId.length > 0,
+  });
+
   const projectIdValid = projectId.length > 0;
   const vintageYearValid = isValidYear(vintageYear);
   const amountValid = isValidAmount(amount);
@@ -101,6 +123,7 @@ function RetireForm() {
       setProjectId('');
       setVintageYear('');
       setAmount('');
+      clearDataCache();
       try {
         const record = await getRetirementByTxHash(txHash);
         setConfirmation({ txHash, record, searching: false });
@@ -118,6 +141,67 @@ function RetireForm() {
       <h1 className="text-2xl font-bold text-gray-900">Retire Credits</h1>
 
       <div className="space-y-4 rounded-lg border border-gray-200 p-6">
+        {projectsQuery.data && projectsQuery.data.length > 0 && (
+          <div>
+            <label
+              htmlFor="retire-project-select"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Project
+            </label>
+            <select
+              id="retire-project-select"
+              value={
+                projectsQuery.data.some((p) => p.id === projectId)
+                  ? projectId
+                  : ''
+              }
+              onChange={(e) => setProjectId(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">Select a registered project…</option>
+              {projectsQuery.data.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.methodology} — {project.geography}
+                </option>
+              ))}
+            </select>
+            {projectsQuery.data.length > 1 && (
+              <p className="mt-1 text-xs text-gray-400">
+                Or type a project ID manually below.
+              </p>
+            )}
+          </div>
+        )}
+
+        {vintagesQuery.data && vintagesQuery.data.length > 0 && (
+          <div>
+            <label
+              htmlFor="retire-vintage-select"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Vintage Year
+            </label>
+            <select
+              id="retire-vintage-select"
+              value={
+                vintagesQuery.data.some((v) => String(v.year) === vintageYear)
+                  ? vintageYear
+                  : ''
+              }
+              onChange={(e) => setVintageYear(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">Select a vintage…</option>
+              {vintagesQuery.data.map((vintage) => (
+                <option key={vintage.year} value={String(vintage.year)}>
+                  {vintage.year}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">
             Project ID

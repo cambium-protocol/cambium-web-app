@@ -249,21 +249,22 @@ No server-side secrets are required beyond standard analytics/monitoring keys �
 
 | Page | Status |
 |---|---|
-| Landing / marketing | Working — renders, links to Projects/Trade/Retire |
-| Project explorer | Working — loads projects from on-chain registry events, with search and filters |
+| Landing / marketing | Working — renders with live protocol-wide stats and a recent-retirements panel sourced from on-chain events |
+| Project explorer | Working — loads projects from on-chain registry events, with search and methodology/geography filters |
 | Project detail + proof transparency | Working — methodology, geography, verifying key, and per-vintage supply from on-chain data |
 | Trade (AMM swap) | Working — quotes, builds swap tx, submits via wallet |
 | Trade (limit orders) | Coming Soon — `placeLimitOrder` / `cancelOrder` not yet in SDK |
-| Retire | Working — builds tx via SDK, signs with wallet, submits, and confirms against the on-chain retirement record; PDF certificate download |
+| Retire | Working — pick a project and vintage from live registry data (or enter manually), builds tx via SDK, signs with wallet, submits, and confirms against the on-chain retirement record; PDF certificate download |
 | Portfolio dashboard | Working — balance via `credits.balanceOf`, retirement history and transfer activity from on-chain events |
-| Public retirement ledger | Working — searchable/filterable table sourced from on-chain retirement events; JSON API + single-record verification |
+| Public retirement ledger | Working — searchable/filterable/paginated table sourced from on-chain retirement events; JSON API, CSV export, and single-record verification |
 
 | Infrastructure | Status |
 |---|---|
 | Wallet connection (Freighter etc.) | Working via Stellar Wallets Kit |
-| Public API | Working — `GET /api/ledger` and `GET /api/retirements/:id` |
+| Public API | Working — `GET /api/ledger`, `GET /api/ledger?format=csv`, `GET /api/retirements/:id`, `GET /api/stats`, and `GET /api/certificates/:id` (PDF) |
 | Retirement certificates | Working — `GET /api/certificates/:id` returns a PDF |
-| Unit tests (Vitest) | 65/65 passing |
+| Data layer | Working — on-chain event indexer with a short-TTL in-process cache so pages and APIs share a single RPC scan |
+| Unit tests (Vitest) | 90/90 passing |
 | E2E tests (Playwright) | Scaffolded, requires browser install in CI |
 
 ---

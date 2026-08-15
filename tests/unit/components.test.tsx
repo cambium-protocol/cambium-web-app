@@ -13,8 +13,7 @@ vi.mock('@/lib/chain', () => ({
   getRetirementsByRetiree: vi.fn(),
 }));
 
-import { getRetirementLedger } from '@/lib/chain';
-
+import { getRetirementLedger, getRegisteredProjects } from '@/lib/chain';
 const ACCOUNT = 'GD5ATW7EKDOTEDZRKLRBO4CBORU5BAX5HND3KRCAPM3AS4JMB5MHK7BJ';
 
 const queryClient = new QueryClient({
@@ -124,6 +123,10 @@ describe('Ledger page', () => {
 });
 
 describe('Retire page', () => {
+  beforeEach(() => {
+    vi.mocked(getRegisteredProjects).mockResolvedValue([]);
+  });
+
   it('renders the retire form', () => {
     render(withProviders(<RetirePage />));
     expect(screen.getByText('Retire Credits')).toBeInTheDocument();
