@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as getLedger } from '@/app/api/ledger/route';
 import { GET as getRecord } from '@/app/api/retirements/[id]/route';
+import type { RetirementRecord } from '@cambium-protocol/sdk';
 
 const ACCOUNT = 'GD5ATW7EKDOTEDZRKLRBO4CBORU5BAX5HND3KRCAPM3AS4JMB5MHK7BJ';
 
@@ -52,6 +53,25 @@ describe('public ledger API', () => {
       new Request('http://localhost/api/ledger?retiree=G000000000000000000000000000000000000000000000000000'),
     );
     expect((await none.json()).count).toBe(0);
+  });
+
+  it('exports filtered records as CSV when format=csv', async () => {
+    vi.mocked(getRetirementLedger).mockResolvedValue(
+      RECORDS as unknown as RetirementRecord[],
+    );
+
+    const response = await getLedger(
+      new Request('http://localhost/api/ledger?format=csv'),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/csv');
+    expect(response.headers.get('Content-Disposition')).toContain('attachment');
+
+    const text = await response.text();
+    expect(text.split('\n')).toHaveLength(2);
+    expect(text).toContain('retirement_id,project_id,vintage_year');
+    expect(text).toContain('abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789');
+    expect(text).toContain('1.5');
   });
 });
 

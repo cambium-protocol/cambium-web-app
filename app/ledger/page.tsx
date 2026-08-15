@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { getRetirementLedger } from '@/lib/chain';
@@ -14,6 +14,8 @@ import type { RetirementRecord } from '@cambium-protocol/sdk';
 const selectClass =
   'rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700';
 
+const PAGE_SIZE = 20;
+
 export default function LedgerPage() {
   const { data: entries, isLoading, error } = useQuery<RetirementRecord[]>({
     queryKey: ['ledger'],
@@ -24,6 +26,7 @@ export default function LedgerPage() {
   const [year, setYear] = useState('');
   const [retireeType, setRetireeType] = useState<'all' | 'public' | 'shielded'>('all');
   const [minAmount, setMinAmount] = useState('');
+  const [page, setPage] = useState(1);
 
   const years = useMemo(
     () => availableVintageYears(entries ?? []),
@@ -40,6 +43,14 @@ export default function LedgerPage() {
       }),
     [entries, search, year, retireeType, minAmount],
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, year, retireeType, minAmount]);
 
   const totalRetired = filtered.reduce(
     (sum, entry) => sum + Number(entry.amount),
@@ -73,6 +84,20 @@ export default function LedgerPage() {
           · verify one record:{' '}
           <span className="font-mono">/api/retirements/&lt;id&gt;</span>
         </p>
+        <div className="mt-3 flex gap-3">
+          <a
+            href="/api/ledger?format=csv"
+            className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-gray-400"
+          >
+            Export all (CSV)
+          </a>
+          <Link
+            href="/api/stats"
+            className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-gray-400"
+          >
+            Protocol stats (JSON)
+          </Link>
+        </div>
       </div>
 
       {entries && entries.length > 0 && (
@@ -232,75 +257,120 @@ export default function LedgerPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-gray-200">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 font-medium text-gray-500">
-                      Retirement ID
-                    </th>
-                    <th className="px-4 py-3 font-medium text-gray-500">
-                      Project
-                    </th>
-                    <th className="px-4 py-3 font-medium text-gray-500">
-                      Amount
-                    </th>
-                    <th className="px-4 py-3 font-medium text-gray-500">
-                      Vintage
-                    </th>
-                    <th className="px-4 py-3 font-medium text-gray-500">
-                      Retired By
-                    </th>
-                    <th className="px-4 py-3 font-medium text-gray-500">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {filtered.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <span
-                          className="font-mono text-xs text-gray-600"
-                          title={entry.id}
-                        >
-                          {shortAddress(entry.id, 10, 6)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/projects/${entry.projectId}`}
-                          className="font-medium text-green-600 hover:text-green-700"
-                        >
-                          {shortAddress(entry.projectId, 10, 6)}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 font-medium">
-                        {formatAmount(entry.amount)} tCO2e
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {entry.vintageYear}
-                      </td>
-                      <td className="px-4 py-3">
-                        {entry.retiree.type === 'public' ? (
+            <>
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Retirement ID
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Project
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Amount
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Vintage
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Retired By
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {paginated.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
                           <span
                             className="font-mono text-xs text-gray-600"
-                            title={entry.retiree.address}
+                            title={entry.id}
                           >
-                            {shortAddress(entry.retiree.address)}
+                            {shortAddress(entry.id, 10, 6)}
                           </span>
-                        ) : (
-                          <Badge tone="violet">Shielded</Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {formatDate(entry.retiredAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/projects/${entry.projectId}`}
+                            className="font-medium text-green-600 hover:text-green-700"
+                          >
+                            {shortAddress(entry.projectId, 10, 6)}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 font-medium">
+                          {formatAmount(entry.amount)} tCO2e
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {entry.vintageYear}
+                        </td>
+                        <td className="px-4 py-3">
+                          {entry.retiree.type === 'public' ? (
+                            <span
+                              className="font-mono text-xs text-gray-600"
+                              title={entry.retiree.address}
+                            >
+                              {shortAddress(entry.retiree.address)}
+                            </span>
+                          ) : (
+                            <Badge tone="violet">Shielded</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {formatDate(entry.retiredAt)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-3 whitespace-nowrap text-xs">
+                            <a
+                              href={`/api/retirements/${entry.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-green-600 hover:text-green-700"
+                            >
+                              Verify
+                            </a>
+                            <a
+                              href={`/api/certificates/${entry.id}`}
+                              className="font-medium text-green-600 hover:text-green-700"
+                            >
+                              PDF
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <p className="text-gray-500">
+                  Page {safePage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="rounded-md border border-gray-300 px-3 py-1.5 font-medium text-gray-700 hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="rounded-md border border-gray-300 px-3 py-1.5 font-medium text-gray-700 hover:border-gray-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </>
       )}

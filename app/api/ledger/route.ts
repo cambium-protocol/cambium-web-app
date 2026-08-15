@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getRetirementLedger } from '@/lib/chain';
+import { retirementRecordsToCsv } from '@/lib/ledger/csv';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Public retirement ledger API.
  *
- * GET /api/ledger?limit=50&projectId=G…&retiree=G…
+ * GET /api/ledger?limit=50&projectId=G…&retiree=G…&format=csv
  *
  * Returns retirement records sourced from on-chain events, newest first.
  * `limit` is clamped to [1, 500] (default 50). `projectId` and `retiree`
- * filter by exact (case-insensitive) address.
+ * filter by exact (case-insensitive) address. With `format=csv` the response
+ * is an RFC-4180 CSV download of the filtered records.
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -33,6 +35,17 @@ export async function GET(request: Request) {
     records = records.filter(
       (r) => r.retiree.type === 'public' && r.retiree.address.toLowerCase() === needle,
     );
+  }
+
+  if (url.searchParams.get('format') === 'csv') {
+    const csv = retirementRecordsToCsv(records);
+    return new NextResponse(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="cambium-retirements.csv"',
+        'Cache-Control': 'no-store',
+      },
+    });
   }
 
   return NextResponse.json(
