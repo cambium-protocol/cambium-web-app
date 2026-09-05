@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  ReactNode,
+} from 'react';
 
 interface Toast {
   id: string;
@@ -18,13 +26,23 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, []);
 
   const addToast = useCallback((type: Toast['type'], message: string) => {
-    const id = Math.random().toString(36).slice(2);
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setToasts((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 5000);
+    timersRef.current.push(
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 5000),
+    );
   }, []);
 
   const removeToast = useCallback((id: string) => {
@@ -34,7 +52,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
+        className="fixed bottom-4 right-4 z-50 flex flex-col gap-2"
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -48,10 +71,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           >
             <span className="flex-1">{toast.message}</span>
             <button
+              type="button"
               onClick={() => removeToast(toast.id)}
+              aria-label="Dismiss notification"
               className="ml-2 text-current opacity-50 hover:opacity-100"
             >
-              x
+              ×
             </button>
           </div>
         ))}
