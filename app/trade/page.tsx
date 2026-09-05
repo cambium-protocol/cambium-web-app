@@ -3,6 +3,8 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getCambiumClient } from '@/lib/cambiumClient';
+import { fixedPointToString } from '@/lib/chain';
+import { decimalToFixedPoint } from '@/lib/registry/vintages';
 import { useWallet } from '@/lib/hooks/useWallet';
 import { useToast } from '@/lib/hooks/useToast';
 import type { Quote } from '@cambium-protocol/sdk';
@@ -32,14 +34,14 @@ export default function TradePage() {
       const client = getCambiumClient();
       return client.marketplace.quote({ poolId, amountIn });
     },
-    enabled: poolIdValid && amountValid && BigInt(amountIn) > BigInt(0),
+    enabled: poolIdValid && amountValid,
   });
 
   const minAmountOut = useMemo(() => {
     if (!quoteQuery.data?.amountOut) return '0';
-    const out = BigInt(quoteQuery.data.amountOut);
-    const slippageFactor = BigInt(Math.floor((100 - Number(slippage)) * 100));
-    return (out * slippageFactor / BigInt(10000)).toString();
+    const out = decimalToFixedPoint(quoteQuery.data.amountOut);
+    const slippageFactor = BigInt((100 - Number(slippage)) * 100);
+    return fixedPointToString((out * slippageFactor) / BigInt(10000));
   }, [quoteQuery.data?.amountOut, slippage]);
 
   const swapMutation = useMutation({
@@ -81,9 +83,6 @@ export default function TradePage() {
             placeholder="0x..."
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
           />
-          {poolId.length > 0 && !poolIdValid && (
-            <p className="mt-1 text-xs text-red-600">Pool ID is required</p>
-          )}
         </div>
 
         <div>
