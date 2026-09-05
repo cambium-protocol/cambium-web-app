@@ -51,6 +51,9 @@ export default function HomePage() {
   const stats = statsQuery.data;
   const recent = (recentQuery.data ?? []).slice(0, 5);
 
+  const statsError = statsQuery.error;
+  const recentError = recentQuery.error;
+
   return (
     <div className="flex flex-col items-center gap-12 py-16">
       <section className="text-center">
@@ -65,36 +68,45 @@ export default function HomePage() {
       </section>
 
       <section className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          label="Total Retired"
-          value={
-            statsQuery.isLoading ? (
-              <Skeleton className="h-7 w-24" />
-            ) : (
-              `${formatAmount(stats?.totalRetired ?? '0')} tCO2e`
-            )
-          }
-        />
-        <StatCard
-          label="Retirements"
-          value={
-            statsQuery.isLoading ? (
-              <Skeleton className="h-7 w-16" />
-            ) : (
-              (stats?.totalRetirements ?? 0).toLocaleString()
-            )
-          }
-        />
-        <StatCard
-          label="Projects Registered"
-          value={
-            statsQuery.isLoading ? (
-              <Skeleton className="h-7 w-16" />
-            ) : (
-              (stats?.projectsRegistered ?? 0).toLocaleString()
-            )
-          }
-        />
+        {statsError ? (
+          <div className="col-span-full rounded-md bg-red-50 p-4 text-sm text-red-700">
+            Protocol stats are temporarily unavailable. Please try again in a
+            moment.
+          </div>
+        ) : (
+          <>
+            <StatCard
+              label="Total Retired"
+              value={
+                statsQuery.isLoading ? (
+                  <Skeleton className="h-7 w-24" />
+                ) : (
+                  `${formatAmount(stats?.totalRetired ?? '0')} tCO2e`
+                )
+              }
+            />
+            <StatCard
+              label="Retirements"
+              value={
+                statsQuery.isLoading ? (
+                  <Skeleton className="h-7 w-16" />
+                ) : (
+                  (stats?.totalRetirements ?? 0).toLocaleString()
+                )
+              }
+            />
+            <StatCard
+              label="Projects Registered"
+              value={
+                statsQuery.isLoading ? (
+                  <Skeleton className="h-7 w-16" />
+                ) : (
+                  (stats?.projectsRegistered ?? 0).toLocaleString()
+                )
+              }
+            />
+          </>
+        )}
       </section>
 
       <section className="grid w-full max-w-3xl grid-cols-1 gap-6 md:grid-cols-3">
@@ -123,67 +135,76 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {recentQuery.isLoading && (
-          <div className="space-y-2">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+        {recentError ? (
+          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+            Recent retirements are temporarily unavailable. Please try again in
+            a moment.
           </div>
-        )}
+        ) : (
+          <>
+            {recentQuery.isLoading && (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            )}
 
-        {!recentQuery.isLoading && recent.length === 0 && (
-          <div className="rounded-lg border border-gray-200 py-8 text-center">
-            <p className="text-sm text-gray-500">
-              No retirement records found in the scanned ledger range yet.
-            </p>
-          </div>
-        )}
+            {!recentQuery.isLoading && recent.length === 0 && (
+              <div className="rounded-lg border border-gray-200 py-8 text-center">
+                <p className="text-sm text-gray-500">
+                  No retirement records found in the scanned ledger range yet.
+                </p>
+              </div>
+            )}
 
-        {recent.length > 0 && (
-          <div className="overflow-hidden rounded-lg border border-gray-200">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 font-medium text-gray-500">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 font-medium text-gray-500">
-                    Vintage
-                  </th>
-                  <th className="px-4 py-3 font-medium text-gray-500">
-                    Retired By
-                  </th>
-                  <th className="px-4 py-3 font-medium text-gray-500">
-                    Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {recent.map((entry) => (
-                  <tr key={entry.id}>
-                    <td className="px-4 py-3 font-medium">
-                      {formatAmount(entry.amount)} tCO2e
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {entry.vintageYear}
-                    </td>
-                    <td className="px-4 py-3">
-                      {entry.retiree.type === 'public' ? (
-                        <span className="font-mono text-xs text-gray-600">
-                          {shortAddress(entry.retiree.address)}
-                        </span>
-                      ) : (
-                        <Badge tone="violet">Shielded</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {formatDate(entry.retiredAt)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            {recent.length > 0 && (
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Amount
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Vintage
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Retired By
+                      </th>
+                      <th className="px-4 py-3 font-medium text-gray-500">
+                        Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {recent.map((entry) => (
+                      <tr key={entry.id}>
+                        <td className="px-4 py-3 font-medium">
+                          {formatAmount(entry.amount)} tCO2e
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {entry.vintageYear}
+                        </td>
+                        <td className="px-4 py-3">
+                          {entry.retiree.type === 'public' ? (
+                            <span className="font-mono text-xs text-gray-600">
+                              {shortAddress(entry.retiree.address)}
+                            </span>
+                          ) : (
+                            <Badge tone="violet">Shielded</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {formatDate(entry.retiredAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </section>
 
