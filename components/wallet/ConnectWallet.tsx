@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useWallet } from '@/lib/hooks/useWallet';
+import { shortAddress } from '@/lib/format';
 
 export function ConnectWallet() {
   const { connected, address, loading, connect, disconnect } = useWallet();
@@ -23,8 +24,8 @@ export function ConnectWallet() {
     setError(null);
     try {
       await connect();
-    } catch (e: any) {
-      setError(e.message || 'Failed to connect');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to connect');
     }
   };
 
@@ -60,7 +61,7 @@ export function ConnectWallet() {
         onClick={() => setOpen(!open)}
         className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
-        {address?.slice(0, 6)}...{address?.slice(-4)}
+        {address && <span className="font-mono">{shortAddress(address)}</span>}
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-lg">
